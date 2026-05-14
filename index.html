@@ -215,13 +215,23 @@
       animation: glow 4.8s ease-in-out infinite;
     }
 
-    video {
+    .pet-canvas {
       width: min(78vw, 320px);
       max-height: 58vh;
-      object-fit: contain;
       filter: none;
       transform-origin: center;
       animation: bob 4.6s ease-in-out infinite;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* 触摸瞬时反馈 */
+    .pet-canvas.spark {
+      filter: brightness(1.35) drop-shadow(0 0 18px rgba(190,230,255,0.55));
+      transition: filter 0.15s ease-out;
     }
 
     .footer {
@@ -270,10 +280,9 @@
       opacity: 0;
     }
 
-    .orb video {
+    .orb canvas {
       width: 100%;
       height: 100%;
-      object-fit: cover;
       filter: saturate(1.1) contrast(1.05);
       transform: scale(1.02);
     }
@@ -324,7 +333,7 @@
         width: min(100%, 620px);
         aspect-ratio: 0.92 / 1;
       }
-      video {
+      .pet-canvas {
         width: min(56vw, 420px);
       }
       .soft-bars {
@@ -334,6 +343,30 @@
   </style>
 </head>
 <body>
+
+  <!-- ====== 隐藏视频源（仅解码，不显示） ====== -->
+  <video
+    id="idleVideo"
+    src="transparent-1778528599049.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+  <video
+    id="reactionVideo"
+    src="pet-reaction.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+  <video
+    id="orbVideo"
+    src="siri.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -351,14 +384,11 @@
         <div class="pet-shell">
           <div class="video-wrap">
             <div class="video-glow" aria-hidden="true"></div>
-            <video
-              src="transparent-1778528599049.webm"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="auto"
-            ></video>
+            <canvas
+              id="petCanvas"
+              class="pet-canvas"
+              aria-label="宠物动画"
+            ></canvas>
           </div>
 
           <div class="soft-bars" aria-hidden="true">
@@ -371,23 +401,154 @@
     <footer class="footer">
       <div class="voice">
         <div class="orb" aria-label="语音按钮">
-          <video
-            src="siri.webm"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="auto"
-          ></video>
+          <canvas id="orbCanvas" aria-label="语音动画"></canvas>
         </div>
       </div>
     </footer>
   </main>
+
   <script>
-    const fsBtn = document.getElementById('fsBtn');
-    fsBtn?.addEventListener('click', async () => {
+    // ============================================================
+    //  宠物动画引擎 — Canvas 渲染 + 触摸交互状态机
+    // ============================================================
+    (function () {
+      /* ---- 隐藏视频源 ---- */
+      const idleVideo = document.getElementById('idleVideo');
+      const reactionVideo = document.getElementById('reactionVideo');
+      const orbVideo = document.getElementById('orbVideo');
+
+      /* ---- 画布 ---- */
+      const petCanvas = document.getElementById('petCanvas');
+      const orbCanvas = document.getElementById('orbCanvas');
+      const petCtx = petCanvas.getContext('2d', { alpha: true });
+      const orbCtx = orbCanvas.getContext('2d', { alpha: true });
+
+      /* ---- 画布内部分辨率（与视频源一致） ---- */
+      petCanvas.width = 720;
+      petCanvas.height = 960;
+      orbCanvas.width = 1280;
+      orbCanvas.height = 960;
+
+      /* ---- 状态 ---- */
+      let currentVideo = idleVideo;
+      let pendingReaction = false;
+      let playingReaction = false;
+      let reactionAvailable = false;
+      let sparkTimer = null;
+
+      /* ---- 渲染循环 ---- */
+      function render() {
+        if (currentVideo.readyState >= 2) {
+          petCtx.clearRect(0, 0, petCanvas.width, petCanvas.height);
+          petCtx.drawImage(currentVideo, 0, 0, petCanvas.width, petCanvas.height);
+        }
+        if (orbVideo.readyState >= 2) {
+          orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
+          orbCtx.drawImage(orbVideo, 0, 0, orbCanvas.width, orbCanvas.height);
+        }
+        requestAnimationFrame(render);
+      }
+
+      /* ---- 切换到指定视频 ---- */
+      function switchTo(video, opts) {
+        opts = opts || {};
+        currentVideo = video;
+        video.currentTime = 0;
+        video.loop = !!opts.loop;
+        return video.play();
+      }
+
+      /* ---- idle 播完一轮 ---- */
+      idleVideo.addEventListener('ended', function () {
+        if (pendingReaction && reactionAvailable) {
+          pendingReaction = false;
+          playingReaction = true;
+          switchTo(reactionVideo, { loop: false });
+        } else {
+          idleVideo.currentTime = 0;
+          idleVideo.play();
+        }
+      });
+
+      /* ---- reaction 播完 ---- */
+      reactionVideo.addEventListener('ended', function () {
+        playingReaction = false;
+        switchTo(idleVideo, { loop: false });
+      });
+
+      /* ---- 触摸瞬时反馈 ---- */
+      function showSpark() {
+        petCanvas.classList.add('spark');
+        clearTimeout(sparkTimer);
+        sparkTimer = setTimeout(function () {
+          petCanvas.classList.remove('spark');
+        }, 280);
+      }
+
+      /* ---- 用户交互：排队等待切 reaction ---- */
+      function handleInteraction(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (playingReaction || pendingReaction) return;
+
+        pendingReaction = true;
+        showSpark();
+
+        if (!reactionAvailable) {
+          pendingReaction = false;
+        }
+      }
+
+      petCanvas.addEventListener('click', handleInteraction);
+      petCanvas.addEventListener('touchstart', handleInteraction, { passive: false });
+
+      /* ---- 禁用 canvas 右键菜单 ---- */
+      petCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      orbCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+      /* ---- 启动 ---- */
+      async function boot() {
+        // 探测 reaction 视频是否可用
+        try {
+          await reactionVideo.play();
+          reactionVideo.pause();
+          reactionVideo.currentTime = 0;
+          reactionAvailable = true;
+        } catch (_) {
+          reactionAvailable = false;
+        }
+
+        // 启动 idle + orb
+        try {
+          idleVideo.loop = false;
+          await idleVideo.play();
+          await orbVideo.play();
+          orbVideo.loop = true;
+          requestAnimationFrame(render);
+        } catch (_) {
+          // 自动播放被拦截，等首次触摸启动
+          var startOnTouch = async function () {
+            document.removeEventListener('touchstart', startOnTouch);
+            document.removeEventListener('click', startOnTouch);
+            await idleVideo.play();
+            await orbVideo.play();
+            orbVideo.loop = true;
+            requestAnimationFrame(render);
+          };
+          document.addEventListener('touchstart', startOnTouch, { once: true });
+          document.addEventListener('click', startOnTouch, { once: true });
+        }
+      }
+
+      boot();
+    })();
+
+    /* ---- 全屏按钮 ---- */
+    var fsBtn = document.getElementById('fsBtn');
+    fsBtn && fsBtn.addEventListener('click', async function () {
       try {
-        const el = document.documentElement;
+        var el = document.documentElement;
         if (!document.fullscreenElement && el.requestFullscreen) {
           await el.requestFullscreen();
           fsBtn.textContent = '⤡';
@@ -400,7 +561,7 @@
       }
     });
 
-    document.addEventListener('fullscreenchange', () => {
+    document.addEventListener('fullscreenchange', function () {
       fsBtn.textContent = document.fullscreenElement ? '⤡' : '⤢';
     });
   </script>

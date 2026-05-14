@@ -195,13 +195,22 @@
       animation: glow 4.8s ease-in-out infinite;
     }
 
-    video {
+    .pet-canvas {
       width: min(78vw, 320px);
       max-height: 58vh;
-      object-fit: contain;
       filter: none;
       transform-origin: center;
       animation: bob 4.6s ease-in-out infinite;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    .pet-canvas.spark {
+      filter: brightness(1.35) drop-shadow(0 0 18px rgba(190,230,255,0.55));
+      transition: filter 0.15s ease-out;
     }
 
     .footer {
@@ -250,10 +259,9 @@
       opacity: 0;
     }
 
-    .orb video {
+    .orb canvas {
       width: 100%;
       height: 100%;
-      object-fit: cover;
       filter: saturate(1.1) contrast(1.05);
       transform: scale(1.02);
     }
@@ -304,7 +312,7 @@
         width: min(100%, 620px);
         aspect-ratio: 0.92 / 1;
       }
-      video {
+      .pet-canvas {
         width: min(56vw, 420px);
       }
       .soft-bars {
@@ -314,6 +322,29 @@
   </style>
 </head>
 <body>
+
+  <video
+    id="idleVideo"
+    src="transparent-1778528599049.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+  <video
+    id="reactionVideo"
+    src="pet-reaction.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+  <video
+    id="orbVideo"
+    src="siri.webm"
+    muted playsinline preload="auto"
+    disablePictureInPicture disableRemotePlayback
+    style="display:none;"
+  ></video>
+
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -331,14 +362,11 @@
         <div class="pet-shell">
           <div class="video-wrap">
             <div class="video-glow" aria-hidden="true"></div>
-            <video
-              src="transparent-1778528599049.webm"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="auto"
-            ></video>
+            <canvas
+              id="petCanvas"
+              class="pet-canvas"
+              aria-label="宠物动画"
+            ></canvas>
           </div>
 
           <div class="soft-bars" aria-hidden="true">
@@ -351,17 +379,126 @@
     <footer class="footer">
       <div class="voice">
         <div class="orb" aria-label="语音按钮">
-          <video
-            src="siri.webm"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="auto"
-          ></video>
+          <canvas id="orbCanvas" aria-label="语音动画"></canvas>
         </div>
       </div>
     </footer>
   </main>
+
+  <script>
+    (function () {
+      var idleVideo = document.getElementById('idleVideo');
+      var reactionVideo = document.getElementById('reactionVideo');
+      var orbVideo = document.getElementById('orbVideo');
+
+      var petCanvas = document.getElementById('petCanvas');
+      var orbCanvas = document.getElementById('orbCanvas');
+      var petCtx = petCanvas.getContext('2d', { alpha: true });
+      var orbCtx = orbCanvas.getContext('2d', { alpha: true });
+
+      petCanvas.width = 720;
+      petCanvas.height = 960;
+      orbCanvas.width = 1280;
+      orbCanvas.height = 960;
+
+      var currentVideo = idleVideo;
+      var pendingReaction = false;
+      var playingReaction = false;
+      var reactionAvailable = false;
+      var sparkTimer = null;
+
+      function render() {
+        if (currentVideo.readyState >= 2) {
+          petCtx.clearRect(0, 0, petCanvas.width, petCanvas.height);
+          petCtx.drawImage(currentVideo, 0, 0, petCanvas.width, petCanvas.height);
+        }
+        if (orbVideo.readyState >= 2) {
+          orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
+          orbCtx.drawImage(orbVideo, 0, 0, orbCanvas.width, orbCanvas.height);
+        }
+        requestAnimationFrame(render);
+      }
+
+      function switchTo(video, opts) {
+        opts = opts || {};
+        currentVideo = video;
+        video.currentTime = 0;
+        video.loop = !!opts.loop;
+        return video.play();
+      }
+
+      idleVideo.addEventListener('ended', function () {
+        if (pendingReaction && reactionAvailable) {
+          pendingReaction = false;
+          playingReaction = true;
+          switchTo(reactionVideo, { loop: false });
+        } else {
+          idleVideo.currentTime = 0;
+          idleVideo.play();
+        }
+      });
+
+      reactionVideo.addEventListener('ended', function () {
+        playingReaction = false;
+        switchTo(idleVideo, { loop: false });
+      });
+
+      function showSpark() {
+        petCanvas.classList.add('spark');
+        clearTimeout(sparkTimer);
+        sparkTimer = setTimeout(function () {
+          petCanvas.classList.remove('spark');
+        }, 280);
+      }
+
+      function handleInteraction(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (playingReaction || pendingReaction) return;
+        pendingReaction = true;
+        showSpark();
+        if (!reactionAvailable) {
+          pendingReaction = false;
+        }
+      }
+
+      petCanvas.addEventListener('click', handleInteraction);
+      petCanvas.addEventListener('touchstart', handleInteraction, { passive: false });
+      petCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      orbCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+      async function boot() {
+        try {
+          await reactionVideo.play();
+          reactionVideo.pause();
+          reactionVideo.currentTime = 0;
+          reactionAvailable = true;
+        } catch (_) {
+          reactionAvailable = false;
+        }
+
+        try {
+          idleVideo.loop = false;
+          await idleVideo.play();
+          await orbVideo.play();
+          orbVideo.loop = true;
+          requestAnimationFrame(render);
+        } catch (_) {
+          var startOnTouch = async function () {
+            document.removeEventListener('touchstart', startOnTouch);
+            document.removeEventListener('click', startOnTouch);
+            await idleVideo.play();
+            await orbVideo.play();
+            orbVideo.loop = true;
+            requestAnimationFrame(render);
+          };
+          document.addEventListener('touchstart', startOnTouch, { once: true });
+          document.addEventListener('click', startOnTouch, { once: true });
+        }
+      }
+
+      boot();
+    })();
+  </script>
 </body>
 </html>
