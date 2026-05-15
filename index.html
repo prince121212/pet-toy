@@ -3,578 +3,633 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>宠物养成</title>
+  <title>手机养宠</title>
   <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.webmanifest" />
   <style>
     :root {
-      --bg1: #000000;
-      --bg2: #000000;
-      --bg3: #000000;
-      --panel: rgba(11, 20, 36, 0.56);
-      --panel-strong: rgba(11, 20, 36, 0.72);
-      --line: rgba(168, 214, 255, 0.14);
-      --text: #e9f4ff;
-      --muted: rgba(233, 244, 255, 0.68);
-      --accent: #7ec7ff;
-      --accent2: #c6f2ff;
-      --shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
+      color-scheme: dark;
+      --ink: #17202a;
+      --muted: #6c7682;
+      --soft: rgba(255, 255, 255, 0.72);
+      --strong: rgba(255, 255, 255, 0.9);
+      --line: rgba(28, 38, 48, 0.1);
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
     }
 
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
+
+    html,
+    body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
+      overflow: hidden;
+      color: #f8fbff;
+      background: #000;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
         "Microsoft YaHei", system-ui, sans-serif;
-      color: var(--text);
-      background: #000;
-      overflow: hidden;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
     }
 
     .app {
       height: 100%;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      padding:
-        max(14px, env(safe-area-inset-top))
-        14px
-        max(16px, env(safe-area-inset-bottom));
-      gap: 12px;
+      min-height: 100%;
       position: relative;
+      background: #000;
+      overflow: hidden;
     }
 
-    .topbar {
+    .page {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: #000;
+      color: #f8fbff;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .safe {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding:
+        max(16px, env(safe-area-inset-top))
+        14px
+        max(14px, env(safe-area-inset-bottom));
+    }
+
+    .statusbar {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.78;
+    }
+
+    .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      background: var(--panel);
-      backdrop-filter: blur(18px);
-      box-shadow: var(--shadow);
+      margin-top: 4px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .paw {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      background: linear-gradient(145deg, #1f3558, #0f192d);
-      display: grid;
-      place-items: center;
-      color: var(--accent);
-      font-size: 18px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
-      flex: 0 0 auto;
-    }
-
-    .titles { min-width: 0; }
-    .titles h1 {
+    .pet-title h1,
+    .settings-title h1,
+    .picker-head h1 {
       margin: 0;
-      font-size: 16px;
-      line-height: 1.1;
-      letter-spacing: 0.02em;
+      font-size: 22px;
+      line-height: 1.12;
+      letter-spacing: 0;
     }
-    .titles p {
-      margin: 4px 0 0;
+
+    .pet-title span {
+      display: block;
+      margin-top: 6px;
+      color: rgba(248, 251, 255, 0.66);
       font-size: 12px;
-      color: var(--muted);
+      line-height: 1.35;
     }
 
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(190, 230, 255, 0.16);
-      color: rgba(233,244,255,0.9);
-      font-size: 12px;
-      white-space: nowrap;
-      flex: 0 0 auto;
-    }
-
-    .top-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    .tool-btn {
+    .tiny-btn {
       appearance: none;
-      border: 0;
-      width: 36px;
-      height: 36px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.08);
-      color: rgba(233,244,255,0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: inherit;
       display: grid;
       place-items: center;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-      flex: 0 0 auto;
+      font-size: 15px;
+      line-height: 1;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
       cursor: pointer;
       text-decoration: none;
     }
-    .tool-btn:active { transform: scale(0.96); }
 
     .stage {
+      min-height: 0;
+      display: grid;
+      place-items: end center;
       position: relative;
+    }
+
+    .pet-sequence {
+      width: min(82vw, 360px);
+      max-height: 68vh;
+      object-fit: contain;
+      filter: drop-shadow(0 20px 24px rgba(0, 0, 0, 0.28));
+      animation: breathe 4s ease-in-out infinite;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .listen-area {
       display: grid;
       place-items: center;
+      padding-bottom: 4px;
+    }
+
+    .siri-orb {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #07101b;
+      box-shadow:
+        0 14px 34px rgba(25, 39, 56, 0.22),
+        inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .siri-orb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.04);
+      display: block;
+    }
+
+    .settings-page {
+      background:
+        linear-gradient(180deg, #283645 0%, #485866 54%, #efe2d1 100%);
+      color: #f8fbff;
+    }
+
+    .settings-main {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+    }
+
+    .pet-card {
+      display: grid;
+      grid-template-columns: 68px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--strong);
+      color: var(--ink);
+      border: 1px solid rgba(24, 32, 42, 0.08);
+      box-shadow: 0 10px 26px rgba(30, 34, 39, 0.08);
+    }
+
+    .pet-card img {
+      width: 62px;
+      height: 62px;
+      object-fit: contain;
+    }
+
+    .pet-card strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .setting-list {
       min-height: 0;
       overflow: hidden;
+      display: grid;
+      align-content: start;
+      gap: 9px;
     }
 
-    .stage::before {
-      content: "";
-      position: absolute;
-      inset: 18px 8px 58px;
-      border-radius: 34px;
-      background:
-        radial-gradient(circle at 50% 42%, rgba(255,255,255,0.08), rgba(255,255,255,0.03) 36%, transparent 75%);
-      filter: blur(2px);
-      opacity: 0.95;
+    .setting-row {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(24, 32, 42, 0.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.78);
+      color: var(--ink);
+      text-decoration: none;
     }
 
-    .card {
-      position: relative;
-      width: min(100%, 560px);
-      height: min(100%, 100%);
+    .setting-row.clickable {
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .setting-icon {
+      width: 34px;
+      height: 34px;
       display: grid;
       place-items: center;
-      padding: 12px;
+      border-radius: 8px;
+      background: #edf2ec;
+      color: #4f7d53;
+      font-size: 16px;
     }
 
-    .pet-shell {
-      width: min(100%, 470px);
-      aspect-ratio: 0.84 / 1;
-      border-radius: 34px;
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-      backdrop-filter: none;
+    .setting-row b {
+      display: block;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .setting-row span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .chevron {
+      color: rgba(23, 32, 42, 0.42);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .switch {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      padding: 3px;
+      background: #dfe7dd;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .switch i {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 3px 8px rgba(35, 42, 50, 0.16);
+    }
+
+    .picker-safe {
+      height: 100%;
       display: grid;
-      grid-template-rows: auto 1fr auto;
-      overflow: hidden;
-      position: relative;
+      grid-template-rows: auto 1fr auto auto;
+      gap: 12px;
+      padding:
+        max(16px, env(safe-area-inset-top))
+        14px
+        max(14px, env(safe-area-inset-bottom));
     }
 
-    .pet-shell::after {
-      content: "";
-      position: absolute;
-      inset: auto 14% 6px;
-      height: 18%;
-      background: transparent;
-      filter: none;
-      transform: none;
+    .picker-top {
+      display: grid;
+      gap: 12px;
     }
 
-    .pet-head {
+    .picker-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 16px 8px;
-      color: rgba(233,244,255,0.85);
-      position: relative;
-      z-index: 1;
-      opacity: 0;
-      pointer-events: none;
+      gap: 12px;
     }
 
-    .pet-head .tag {
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      color: rgba(43, 84, 126, 0.72);
+    .picker-spacer {
+      width: 30px;
+      height: 30px;
     }
 
-    .pet-head .hint {
-      font-size: 12px;
-      color: rgba(43, 84, 126, 0.55);
+    .pet-carousel {
+      min-height: 0;
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 88%;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 10px 4px 16px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      align-items: stretch;
     }
 
-    .video-wrap {
-      position: relative;
+    .pet-carousel::-webkit-scrollbar {
+      display: none;
+    }
+
+    .pet-option {
+      scroll-snap-align: start;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      padding: 14px 12px 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      background: #000;
+      color: #f8fbff;
+    }
+
+    .pet-photo {
+      min-height: 0;
       display: grid;
       place-items: center;
-      padding: 10px 8px 6px;
-      z-index: 1;
-    }
-
-    .video-glow {
-      position: absolute;
-      width: min(84vw, 360px);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: transparent;
-      filter: none;
-      animation: glow 4.8s ease-in-out infinite;
-    }
-
-    .pet-canvas {
-      width: min(78vw, 320px);
-      max-height: 58vh;
-      filter: none;
-      transform-origin: center;
-      animation: bob 4.6s ease-in-out infinite;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
-    }
-
-    /* 触摸瞬时反馈 */
-    .pet-canvas.spark {
-      filter: brightness(1.35) drop-shadow(0 0 18px rgba(190,230,255,0.55));
-      transition: filter 0.15s ease-out;
-    }
-
-    .footer {
-      display: grid;
-      place-items: center;
-      padding-bottom: 2px;
-    }
-
-    .voice {
-      width: 100%;
-      display: grid;
-      place-items: center;
-      gap: 10px;
-      color: var(--text);
-    }
-
-    .voice .copy {
-      font-size: 13px;
-      color: rgba(233,244,255,0.74);
-    }
-
-    .orb {
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      position: relative;
-      display: grid;
-      place-items: center;
+      border-radius: 8px;
+      background: #000;
       overflow: hidden;
-      background: #060912;
-      box-shadow: none;
     }
 
-    .orb::before,
-    .orb::after {
-      content: "";
-      position: absolute;
-      inset: -18px;
-      border-radius: 50%;
-      border: 0;
-      animation: none;
+    .pet-photo img {
+      width: min(96%, 250px);
+      height: min(100%, 360px);
+      object-fit: contain;
+      filter: drop-shadow(0 16px 22px rgba(255,255,255,0.06));
+      animation: breathe 4s ease-in-out infinite;
     }
 
-    .orb::after {
-      inset: -28px;
-      opacity: 0;
+    .pet-option strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.2;
+      text-align: center;
     }
 
-    .orb canvas {
-      width: 100%;
-      height: 100%;
-      filter: saturate(1.1) contrast(1.05);
-      transform: scale(1.02);
+    .pet-option span {
+      display: block;
+      margin-top: 6px;
+      color: rgba(248,251,255,0.62);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: center;
     }
 
-    .soft-bars {
-      position: absolute;
-      inset: auto 16px 88px;
-      height: 10px;
+    .picker-dots {
       display: flex;
       justify-content: center;
       gap: 6px;
-      opacity: 0.7;
-      pointer-events: none;
+      padding-bottom: 2px;
     }
 
-    .soft-bars span {
-      width: 12px;
+    .picker-dots i {
+      width: 6px;
+      height: 6px;
       border-radius: 999px;
-      background: linear-gradient(180deg, rgba(90,168,255,0.8), rgba(90,168,255,0.18));
-      animation: bars 1.4s ease-in-out infinite;
+      background: rgba(255,255,255,0.28);
+      transition: width 0.2s ease, background 0.2s ease;
     }
-    .soft-bars span:nth-child(2) { animation-delay: 0.15s; }
-    .soft-bars span:nth-child(3) { animation-delay: 0.3s; }
-    .soft-bars span:nth-child(4) { animation-delay: 0.45s; }
-    .soft-bars span:nth-child(5) { animation-delay: 0.6s; }
 
-    @keyframes bob {
+    .picker-dots i.active {
+      width: 18px;
+      background: rgba(255,255,255,0.78);
+    }
+
+    .select-btn {
+      width: min(180px, 72%);
+      justify-self: center;
+      min-height: 42px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.9);
+      color: #111820;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    @keyframes breathe {
       0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-6px) scale(1.01); }
+      50% { transform: translateY(-5px) scale(1.015); }
     }
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    @keyframes bars {
-      0%, 100% { height: 4px; opacity: 0.28; }
-      50% { height: 10px; opacity: 1; }
-    }
-
-    @media (min-width: 768px) {
+    @media (min-width: 700px) {
       .app {
-        padding-left: 24px;
-        padding-right: 24px;
+        width: min(390px, 100vw);
+        height: min(844px, 100vh);
+        margin: auto;
+        border-radius: 28px;
+        box-shadow: var(--shadow);
       }
-      .pet-shell {
-        width: min(100%, 620px);
-        aspect-ratio: 0.92 / 1;
-      }
-      .pet-canvas {
-        width: min(56vw, 420px);
-      }
-      .soft-bars {
-        inset: auto 24px 96px;
+
+      body {
+        display: grid;
+        place-items: center;
       }
     }
   </style>
 </head>
 <body>
-
-  <!-- ====== 隐藏视频源（仅解码，不显示） ====== -->
-  <video
-    id="idleVideo"
-    src="transparent-1778528599049.webm"
-    muted playsinline preload="auto"
-    disablePictureInPicture disableRemotePlayback
-    style="display:none;"
-  ></video>
-  <video
-    id="reactionVideo"
-    src="pet-reaction.webm"
-    muted playsinline preload="auto"
-    disablePictureInPicture disableRemotePlayback
-    style="display:none;"
-  ></video>
-  <video
-    id="orbVideo"
-    src="siri.webm"
-    muted playsinline preload="auto"
-    disablePictureInPicture disableRemotePlayback
-    style="display:none;"
-  ></video>
-
-  <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="paw">🐾</div>
-        <div class="titles">
-          <h1>我的小宠物</h1>
-          <p>夜空里陪你玩</p>
-        </div>
-      </div>
-      <div class="top-actions">
-        <a class="tool-btn" href="demo/turnaround-sequence.html" aria-label="查看转圈圈帧序列">↻</a>
-        <button class="tool-btn" id="fsBtn" type="button" aria-label="全屏">⤢</button>
-      </div>
-    </header>
-
-    <section class="stage" aria-label="宠物展示区">
-      <div class="card">
-        <div class="pet-shell">
-          <div class="video-wrap">
-            <div class="video-glow" aria-hidden="true"></div>
-            <canvas
-              id="petCanvas"
-              class="pet-canvas"
-              aria-label="宠物动画"
-            ></canvas>
+  <main class="app" aria-label="手机养宠 Demo">
+    <section class="page home-page active" data-page="home" aria-label="首页">
+      <div class="safe">
+        <div>
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
           </div>
+          <div class="top">
+            <div class="pet-title">
+              <h1 id="petNameTitle">小团子</h1>
+              <span>它在听你说话</span>
+            </div>
+            <button class="tiny-btn" type="button" data-nav="settings" aria-label="打开设置">⚙</button>
+          </div>
+        </div>
 
-          <div class="soft-bars" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span>
+        <section class="stage" aria-label="宠物主舞台">
+          <img class="pet-sequence" id="homePetSequence" src="demo/turnaround_frames/frame_0001.png" alt="宠物动画" />
+        </section>
+
+        <div class="listen-area" aria-label="语音监听状态">
+          <div class="siri-orb">
+            <video src="siri.webm" autoplay muted loop playsinline></video>
           </div>
         </div>
       </div>
     </section>
 
-    <footer class="footer">
-      <div class="voice">
-        <div class="orb" aria-label="语音按钮">
-          <canvas id="orbCanvas" aria-label="语音动画"></canvas>
+    <section class="page settings-page" data-page="settings" aria-label="设置页">
+      <div class="safe">
+        <div>
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
+          </div>
+          <div class="top">
+            <button class="tiny-btn" type="button" data-nav="home" aria-label="返回首页">‹</button>
+            <div class="settings-title">
+              <h1>设置</h1>
+            </div>
+            <span class="tiny-btn" aria-hidden="true"></span>
+          </div>
         </div>
+
+        <section class="settings-main" aria-label="设置内容">
+          <div class="pet-card">
+            <img id="settingsPetThumb" src="demo/turnaround_frames/frame_0090.png" alt="当前宠物" />
+            <div>
+              <strong id="settingsPetName">小团子</strong>
+            </div>
+          </div>
+
+          <div class="setting-list">
+            <button class="setting-row clickable" type="button" data-nav="picker" aria-label="进入更换宠物页面">
+              <div class="setting-icon">◌</div>
+              <div><b>更换宠物</b><span>猫、狗、鸟、IP 形象包</span></div>
+              <div class="chevron">›</div>
+            </button>
+            <div class="setting-row">
+              <div class="setting-icon">♪</div>
+              <div><b>声音反馈</b><span>叫声、呼吸、扑扇、玩具音</span></div>
+              <div class="switch" aria-label="声音已开启"><i></i></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-icon">⌁</div>
+              <div><b>语音监听</b><span>只在前台打开时工作</span></div>
+              <div class="switch" aria-label="语音监听已开启"><i></i></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-icon">◎</div>
+              <div><b>隐私与权限</b><span>麦克风、通知、数据说明</span></div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+        </section>
       </div>
-    </footer>
+    </section>
+
+    <section class="page picker-page" data-page="picker" aria-label="更换宠物页">
+      <div class="picker-safe">
+        <div class="picker-top">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
+          </div>
+          <div class="picker-head">
+            <button class="tiny-btn" type="button" data-nav="settings" aria-label="返回设置">‹</button>
+            <h1>更换宠物</h1>
+            <span class="picker-spacer" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="pet-carousel" id="petCarousel" aria-label="宠物轮播">
+          <article class="pet-option" data-pet-name="小团子">
+            <div class="pet-photo"><img class="picker-sequence" src="demo/turnaround_frames/frame_0001.png" alt="小团子" /></div>
+            <div><strong>小团子</strong><span>安静黏人</span></div>
+          </article>
+          <article class="pet-option" data-pet-name="布丁">
+            <div class="pet-photo"><img class="picker-sequence" src="demo/turnaround_frames/frame_0025.png" alt="布丁" /></div>
+            <div><strong>布丁</strong><span>活泼好奇</span></div>
+          </article>
+          <article class="pet-option" data-pet-name="奶盖">
+            <div class="pet-photo"><img class="picker-sequence" src="demo/turnaround_frames/frame_0050.png" alt="奶盖" /></div>
+            <div><strong>奶盖</strong><span>爱撒娇</span></div>
+          </article>
+          <article class="pet-option" data-pet-name="豆豆">
+            <div class="pet-photo"><img class="picker-sequence" src="demo/turnaround_frames/frame_0075.png" alt="豆豆" /></div>
+            <div><strong>豆豆</strong><span>喜欢陪你发呆</span></div>
+          </article>
+        </div>
+
+        <div class="picker-dots" id="pickerDots" aria-hidden="true">
+          <i class="active"></i><i></i><i></i><i></i>
+        </div>
+        <button class="select-btn" id="selectPetBtn" type="button">选择它</button>
+      </div>
+    </section>
   </main>
 
   <script>
-    // ============================================================
-    //  宠物动画引擎 — Canvas 渲染 + 触摸交互状态机
-    // ============================================================
     (function () {
-      /* ---- 隐藏视频源 ---- */
-      const idleVideo = document.getElementById('idleVideo');
-      const reactionVideo = document.getElementById('reactionVideo');
-      const orbVideo = document.getElementById('orbVideo');
+      const pages = Array.from(document.querySelectorAll('.page'));
+      const navButtons = Array.from(document.querySelectorAll('[data-nav]'));
+      const homePet = document.getElementById('homePetSequence');
+      const pickerPets = Array.from(document.querySelectorAll('.picker-sequence'));
+      const carousel = document.getElementById('petCarousel');
+      const petOptions = Array.from(document.querySelectorAll('.pet-option'));
+      const dots = Array.from(document.querySelectorAll('#pickerDots i'));
+      const selectPetBtn = document.getElementById('selectPetBtn');
+      const petNameTitle = document.getElementById('petNameTitle');
+      const settingsPetName = document.getElementById('settingsPetName');
+      const settingsPetThumb = document.getElementById('settingsPetThumb');
 
-      /* ---- 画布 ---- */
-      const petCanvas = document.getElementById('petCanvas');
-      const orbCanvas = document.getElementById('orbCanvas');
-      const petCtx = petCanvas.getContext('2d', { alpha: true });
-      const orbCtx = orbCanvas.getContext('2d', { alpha: true });
+      let frame = 1;
+      let selectedIndex = 0;
+      const totalFrames = 150;
+      const frameMs = 1000 / 15;
 
-      /* ---- 画布内部分辨率（与视频源一致） ---- */
-      petCanvas.width = 720;
-      petCanvas.height = 960;
-      orbCanvas.width = 1280;
-      orbCanvas.height = 960;
-
-      /* ---- 状态 ---- */
-      let currentVideo = idleVideo;
-      let pendingReaction = false;
-      let playingReaction = false;
-      let reactionAvailable = false;
-      let sparkTimer = null;
-
-      /* ---- 渲染循环 ---- */
-      function render() {
-        if (currentVideo.readyState >= 2) {
-          petCtx.clearRect(0, 0, petCanvas.width, petCanvas.height);
-          petCtx.drawImage(currentVideo, 0, 0, petCanvas.width, petCanvas.height);
-        }
-        if (orbVideo.readyState >= 2) {
-          orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
-          orbCtx.drawImage(orbVideo, 0, 0, orbCanvas.width, orbCanvas.height);
-        }
-        requestAnimationFrame(render);
+      function frameUrl(index) {
+        return 'demo/turnaround_frames/frame_' + String(index).padStart(4, '0') + '.png';
       }
 
-      /* ---- 切换到指定视频 ---- */
-      function switchTo(video, opts) {
-        opts = opts || {};
-        currentVideo = video;
-        video.currentTime = 0;
-        video.loop = !!opts.loop;
-        return video.play();
+      function showPage(name) {
+        pages.forEach(function (page) {
+          page.classList.toggle('active', page.dataset.page === name);
+        });
       }
 
-      /* ---- idle 播完一轮 ---- */
-      idleVideo.addEventListener('ended', function () {
-        if (pendingReaction && reactionAvailable) {
-          pendingReaction = false;
-          playingReaction = true;
-          switchTo(reactionVideo, { loop: false });
-        } else {
-          idleVideo.currentTime = 0;
-          idleVideo.play();
-        }
+      function updatePickerIndex() {
+        const optionWidth = petOptions[0] ? petOptions[0].getBoundingClientRect().width : 1;
+        selectedIndex = Math.max(0, Math.min(petOptions.length - 1, Math.round(carousel.scrollLeft / optionWidth)));
+        dots.forEach(function (dot, index) {
+          dot.classList.toggle('active', index === selectedIndex);
+        });
+      }
+
+      for (let i = 1; i <= totalFrames; i += 1) {
+        const img = new Image();
+        img.src = frameUrl(i);
+      }
+
+      setInterval(function () {
+        frame = frame >= totalFrames ? 1 : frame + 1;
+        homePet.src = frameUrl(frame);
+        pickerPets.forEach(function (item, index) {
+          const offsetFrame = ((frame + index * 24 - 1) % totalFrames) + 1;
+          item.src = frameUrl(offsetFrame);
+        });
+      }, frameMs);
+
+      navButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          showPage(button.dataset.nav);
+        });
       });
 
-      /* ---- reaction 播完 ---- */
-      reactionVideo.addEventListener('ended', function () {
-        playingReaction = false;
-        switchTo(idleVideo, { loop: false });
+      carousel.addEventListener('scroll', function () {
+        window.requestAnimationFrame(updatePickerIndex);
       });
 
-      /* ---- 触摸瞬时反馈 ---- */
-      function showSpark() {
-        petCanvas.classList.add('spark');
-        clearTimeout(sparkTimer);
-        sparkTimer = setTimeout(function () {
-          petCanvas.classList.remove('spark');
-        }, 280);
-      }
-
-      /* ---- 用户交互：排队等待切 reaction ---- */
-      function handleInteraction(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (playingReaction || pendingReaction) return;
-
-        pendingReaction = true;
-        showSpark();
-
-        if (!reactionAvailable) {
-          pendingReaction = false;
-        }
-      }
-
-      petCanvas.addEventListener('click', handleInteraction);
-      petCanvas.addEventListener('touchstart', handleInteraction, { passive: false });
-
-      /* ---- 禁用 canvas 右键菜单 ---- */
-      petCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-      orbCanvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-
-      /* ---- 启动 ---- */
-      async function boot() {
-        // 探测 reaction 视频是否可用
-        try {
-          await reactionVideo.play();
-          reactionVideo.pause();
-          reactionVideo.currentTime = 0;
-          reactionAvailable = true;
-        } catch (_) {
-          reactionAvailable = false;
-        }
-
-        // 启动 idle + orb
-        try {
-          idleVideo.loop = false;
-          await idleVideo.play();
-          await orbVideo.play();
-          orbVideo.loop = true;
-          requestAnimationFrame(render);
-        } catch (_) {
-          // 自动播放被拦截，等首次触摸启动
-          var startOnTouch = async function () {
-            document.removeEventListener('touchstart', startOnTouch);
-            document.removeEventListener('click', startOnTouch);
-            await idleVideo.play();
-            await orbVideo.play();
-            orbVideo.loop = true;
-            requestAnimationFrame(render);
-          };
-          document.addEventListener('touchstart', startOnTouch, { once: true });
-          document.addEventListener('click', startOnTouch, { once: true });
-        }
-      }
-
-      boot();
+      selectPetBtn.addEventListener('click', function () {
+        const selected = petOptions[selectedIndex];
+        const name = selected ? selected.dataset.petName : '小团子';
+        petNameTitle.textContent = name;
+        settingsPetName.textContent = name;
+        settingsPetThumb.src = frameUrl(((frame + selectedIndex * 24 - 1) % totalFrames) + 1);
+        showPage('home');
+      });
     })();
-
-    /* ---- 全屏按钮 ---- */
-    var fsBtn = document.getElementById('fsBtn');
-    fsBtn && fsBtn.addEventListener('click', async function () {
-      try {
-        var el = document.documentElement;
-        if (!document.fullscreenElement && el.requestFullscreen) {
-          await el.requestFullscreen();
-          fsBtn.textContent = '⤡';
-        } else if (document.exitFullscreen) {
-          await document.exitFullscreen();
-          fsBtn.textContent = '⤢';
-        }
-      } catch (err) {
-        fsBtn.textContent = '⤢';
-      }
-    });
-
-    document.addEventListener('fullscreenchange', function () {
-      fsBtn.textContent = document.fullscreenElement ? '⤡' : '⤢';
-    });
   </script>
 </body>
 </html>
