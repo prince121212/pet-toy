@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>透明帧序列 Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #101114;
+      color: #f4f7fb;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      display: grid;
+      place-items: center;
+    }
+
+    .app {
+      width: min(100vw, 720px);
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: 18px;
+    }
+
+    header,
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    .meta {
+      color: rgba(244, 247, 251, 0.68);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .stage {
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #181a1f;
+      position: relative;
+    }
+
+    .stage.checker {
+      background-color: #17191f;
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.08) 75%);
+      background-size: 28px 28px;
+      background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+    }
+
+    canvas {
+      width: min(86vw, 520px);
+      aspect-ratio: 1;
+      image-rendering: auto;
+    }
+
+    button,
+    .nav-btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: #f4f7fb;
+      height: 36px;
+      padding: 0 12px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:active,
+    .nav-btn:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>转圈圈透明帧序列</h1>
+        <div class="meta" id="status">加载中...</div>
+      </div>
+      <div class="actions">
+        <a class="nav-btn" href="../index.html">主页面</a>
+        <button id="toggleBg" type="button">背景</button>
+      </div>
+    </header>
+
+    <section class="stage checker" id="stage" aria-label="透明帧序列播放区">
+      <canvas id="canvas" width="360" height="360"></canvas>
+    </section>
+
+    <footer>
+      <div class="meta">15fps · 150 帧 · 360x360</div>
+      <div class="meta" id="frameText">frame 0001</div>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const frameCount = 150;
+      const fps = 15;
+      const framePath = 'turnaround_frames/frame_';
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const status = document.getElementById('status');
+      const frameText = document.getElementById('frameText');
+      const stage = document.getElementById('stage');
+      const frames = new Array(frameCount);
+      let loaded = 0;
+      let current = 0;
+      let lastTime = 0;
+      let accumulator = 0;
+      let started = false;
+
+      function pad(num) {
+        return String(num).padStart(4, '0');
+      }
+
+      function loadFrame(index) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            loaded += 1;
+            status.textContent = `已加载 ${loaded}/${frameCount}`;
+            frames[index - 1] = img;
+            if (!started && index === 1) {
+              started = true;
+              requestAnimationFrame(tick);
+            }
+            resolve(img);
+          };
+          img.onerror = reject;
+          img.src = `${framePath}${pad(index)}.png`;
+        });
+      }
+
+      async function boot() {
+        await Promise.allSettled(
+          Array.from({ length: frameCount }, (_, index) => loadFrame(index + 1))
+        );
+        status.textContent = '播放中';
+      }
+
+      function tick(now) {
+        if (!lastTime) lastTime = now;
+        const delta = now - lastTime;
+        lastTime = now;
+        accumulator += delta;
+
+        const frameMs = 1000 / fps;
+        while (accumulator >= frameMs) {
+          current = (current + 1) % frameCount;
+          accumulator -= frameMs;
+        }
+
+        const frame = frames[current] || frames.find(Boolean);
+        if (frame) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+        }
+        frameText.textContent = `frame ${pad(current + 1)}`;
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById('toggleBg').addEventListener('click', () => {
+        stage.classList.toggle('checker');
+      });
+
+      boot().catch((error) => {
+        status.textContent = `加载失败：${error.message || error}`;
+      });
+    })();
+  </script>
+</body>
+</html>
