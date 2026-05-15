@@ -71,29 +71,6 @@
         max(14px, env(safe-area-inset-bottom));
     }
 
-    .statusbar {
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .signal {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      opacity: 0.78;
-    }
-
-    .dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
     .top {
       display: flex;
       align-items: center;
@@ -444,10 +421,6 @@
     <section class="page home-page active" data-page="home" aria-label="首页">
       <div class="safe">
         <div>
-          <div class="statusbar">
-            <span>9:41</span>
-            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
-          </div>
           <div class="top">
             <div class="pet-title">
               <h1 id="petNameTitle">小团子</h1>
@@ -472,10 +445,6 @@
     <section class="page settings-page" data-page="settings" aria-label="设置页">
       <div class="safe">
         <div>
-          <div class="statusbar">
-            <span>9:41</span>
-            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
-          </div>
           <div class="top">
             <button class="tiny-btn" type="button" data-nav="home" aria-label="返回首页">‹</button>
             <div class="settings-title">
@@ -522,10 +491,6 @@
     <section class="page picker-page" data-page="picker" aria-label="更换宠物页">
       <div class="picker-safe">
         <div class="picker-top">
-          <div class="statusbar">
-            <span>9:41</span>
-            <span class="signal"><i class="dot"></i><i class="dot"></i><i class="dot"></i> 84%</span>
-          </div>
           <div class="picker-head">
             <button class="tiny-btn" type="button" data-nav="settings" aria-label="返回设置">‹</button>
             <h1>更换宠物</h1>
@@ -589,6 +554,16 @@
         });
       }
 
+      async function enterFullscreen() {
+        const root = document.documentElement;
+        if (document.fullscreenElement || !root.requestFullscreen) return;
+        try {
+          await root.requestFullscreen();
+        } catch (_) {
+          // Mobile browsers usually require a user gesture before fullscreen.
+        }
+      }
+
       function updatePickerIndex() {
         const optionWidth = petOptions[0] ? petOptions[0].getBoundingClientRect().width : 1;
         selectedIndex = Math.max(0, Math.min(petOptions.length - 1, Math.round(carousel.scrollLeft / optionWidth)));
@@ -613,6 +588,7 @@
 
       navButtons.forEach(function (button) {
         button.addEventListener('click', function () {
+          enterFullscreen();
           showPage(button.dataset.nav);
         });
       });
@@ -622,6 +598,7 @@
       });
 
       selectPetBtn.addEventListener('click', function () {
+        enterFullscreen();
         const selected = petOptions[selectedIndex];
         const name = selected ? selected.dataset.petName : '小团子';
         petNameTitle.textContent = name;
@@ -629,6 +606,10 @@
         settingsPetThumb.src = frameUrl(((frame + selectedIndex * 24 - 1) % totalFrames) + 1);
         showPage('home');
       });
+
+      enterFullscreen();
+      window.addEventListener('pointerdown', enterFullscreen, { once: true });
+      window.addEventListener('touchstart', enterFullscreen, { once: true, passive: true });
     })();
   </script>
 </body>
